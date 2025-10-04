@@ -17,7 +17,7 @@ def start(update, context):
 
 def ask_new_question(update, context):
     user_id = update.effective_user.id
-    rds = context.bot_data['redis']
+    r = context.bot_data['redis']
     quiz_items = context.bot_data['quiz_items']
 
     idx_key = f'user:{user_id}:idx'
@@ -28,7 +28,7 @@ def ask_new_question(update, context):
         update.message.reply_text('Нет вопросов')
         return ConversationHandler.END
 
-    idx = rds.get(idx_key)
+    idx = r.get(idx_key)
     idx = int(idx) if idx is not None else 0
     if idx >= len(quiz_items):
         idx = 0
@@ -36,9 +36,9 @@ def ask_new_question(update, context):
     question, full_answer = quiz_items[idx]
     short_answer = cut_answer(full_answer)
 
-    rds.set(question_key, question)
-    rds.set(answer_key, short_answer)
-    rds.set(idx_key, idx + 1)
+    r.set(question_key, question)
+    r.set(answer_key, short_answer)
+    r.set(idx_key, idx + 1)
 
     update.message.reply_text(
         question.strip(),
@@ -50,23 +50,23 @@ def ask_new_question(update, context):
 
 def check_answer(update, context):
     user_id = update.effective_user.id
-    rds = context.bot_data['redis']
+    r = context.bot_data['redis']
 
     question_key = f'user:{user_id}:current_question'
     answer_key = f'user:{user_id}:current_answer'
     score_key = f'user:{user_id}:score'
 
-    expected = rds.get(answer_key) or ''
+    expected = r.get(answer_key) or ''
     user_text = update.message.text or ''
 
     if normalize_answer(user_text) == normalize_answer(expected):
-        rds.incr(score_key, 1)
+        r.incr(score_key, 1)
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
             reply_markup=main_keyboard()
         )
-        rds.delete(question_key)
-        rds.delete(answer_key)
+        r.delete(question_key)
+        r.delete(answer_key)
         return ConversationHandler.END
     else:
         update.message.reply_text(
@@ -78,10 +78,10 @@ def check_answer(update, context):
 
 def give_up(update, context):
     user_id = update.effective_user.id
-    rds = context.bot_data['redis']
+    r = context.bot_data['redis']
 
     answer_key = f'user:{user_id}:current_answer'
-    correct = rds.get(answer_key)
+    correct = r.get(answer_key)
 
     if correct:
         update.message.reply_text(f'Правильный ответ: {correct}', reply_markup=main_keyboard())
@@ -93,9 +93,9 @@ def give_up(update, context):
 
 def show_score(update, context):
     user_id = update.effective_user.id
-    rds = context.bot_data['redis']
+    r = context.bot_data['redis']
     score_key = f'user:{user_id}:score'
-    score_val = rds.get(score_key)
+    score_val = r.get(score_key)
     score = int(score_val) if score_val is not None else 0
 
     update.message.reply_text(f'Твой счёт: {score}', reply_markup=main_keyboard())
@@ -122,7 +122,7 @@ def main():
     quiz = get_qa_dict(quiz_file, encoding)
     quiz_items = list(quiz.items())
 
-    rds = redis.Redis(
+    r = redis.Redis(
         host=redis_host,
         port=redis_port,
         db=redis_db,
@@ -134,7 +134,7 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.bot_data['quiz_items'] = quiz_items
-    dispatcher.bot_data['redis'] = rds
+    dispatcher.bot_data['redis'] = r
 
     conv = ConversationHandler(
         entry_points=[MessageHandler(Filters.regex('^Новый вопрос$'), ask_new_question)],

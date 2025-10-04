@@ -38,59 +38,59 @@ def user_keys(user_id):
     }
 
 
-def ask_new_question_vk(event, vk_api, rds, quiz_items, keyboard):
+def ask_new_question_vk(event, vk_api, r, quiz_items, keyboard):
     keys = user_keys(event.user_id)
     if not quiz_items:
         send(vk_api, event.user_id, 'Нет вопросов', keyboard)
-        rds.set(keys['state'], 'IDLE')
+        r.set(keys['state'], 'IDLE')
         return
     
-    raw_idx = rds.get(keys['idx'])
+    raw_idx = r.get(keys['idx'])
     idx = int(raw_idx) if raw_idx is not None else 0
     if idx >= len(quiz_items):
         idx = 0
     question, full_answer = quiz_items[idx]
     short_answer = cut_answer(full_answer)
-    rds.set(keys['q'], question)
-    rds.set(keys['a'], short_answer)
-    rds.set(keys['idx'], idx + 1)
-    rds.set(keys['state'], 'ASKING')
+    r.set(keys['q'], question)
+    r.set(keys['a'], short_answer)
+    r.set(keys['idx'], idx + 1)
+    r.set(keys['state'], 'ASKING')
     send(vk_api, event.user_id, question.strip(), keyboard)
 
 
-def check_answer_vk(event, vk_api, rds, keyboard):
+def check_answer_vk(event, vk_api, r, keyboard):
     keys = user_keys(event.user_id)
-    expected = rds.get(keys['a']) or ''
+    expected = r.get(keys['a']) or ''
     user_text = event.text or ''
     if normalize_answer(user_text) == normalize_answer(expected):
-        rds.incr(keys['score'], 1)
+        r.incr(keys['score'], 1)
         send(
             vk_api,
             event.user_id,
             'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
             keyboard,
         )
-        rds.delete(keys['q'])
-        rds.delete(keys['a'])
-        rds.set(keys['state'], 'IDLE')
+        r.delete(keys['q'])
+        r.delete(keys['a'])
+        r.set(keys['state'], 'IDLE')
     else:
         send(vk_api, event.user_id, 'Неправильно… Попробуешь ещё раз?', keyboard)
-        rds.set(keys['state'], 'ASKING')
+        r.set(keys['state'], 'ASKING')
 
 
-def give_up_vk(event, vk_api, rds, quiz_items, keyboard):
+def give_up_vk(event, vk_api, r, quiz_items, keyboard):
     keys = user_keys(event.user_id)
-    correct = rds.get(keys['a'])
+    correct = r.get(keys['a'])
     if correct:
         send(vk_api, event.user_id, f'Правильный ответ: {correct}', keyboard)
     else:
         send(vk_api, event.user_id, 'Вопрос не был задан', keyboard)
-    ask_new_question_vk(event, vk_api, rds, quiz_items, keyboard)
+    ask_new_question_vk(event, vk_api, r, quiz_items, keyboard)
 
 
-def show_score_vk(event, vk_api, rds, keyboard):
+def show_score_vk(event, vk_api, r, keyboard):
     keys = user_keys(event.user_id)
-    raw = rds.get(keys['score'])
+    raw = r.get(keys['score'])
     score = int(raw) if raw is not None else 0
     send(vk_api, event.user_id, f'Твой счёт: {score}', keyboard)
 
@@ -108,7 +108,7 @@ def main():
     quiz = get_qa_dict(quiz_file, encoding)
     quiz_items = list(quiz.items())
 
-    rds = redis.Redis(
+    r = redis.Redis(
         host=redis_host,
         port=redis_port,
         db=redis_db,
@@ -125,18 +125,18 @@ def main():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             text = (event.text or '').strip()
             keys = user_keys(event.user_id)
-            state = rds.get(keys['state']) or 'IDLE'
+            state = r.get(keys['state']) or 'IDLE'
     
             match text:
                 case 'Новый вопрос':
-                    ask_new_question_vk(event, vk_api, rds, quiz_items, keyboard)
+                    ask_new_question_vk(event, vk_api, r, quiz_items, keyboard)
                 case 'Сдаться':
-                    give_up_vk(event, vk_api, rds, quiz_items, keyboard)
+                    give_up_vk(event, vk_api, r, quiz_items, keyboard)
                 case 'Мой счёт':
-                    show_score_vk(event, vk_api, rds, keyboard)
+                    show_score_vk(event, vk_api, r, keyboard)
                 case _:
                     if state == 'ASKING':
-                        check_answer_vk(event, vk_api, rds, keyboard)
+                        check_answer_vk(event, vk_api, r, keyboard)
 
 
 if __name__ == '__main__':

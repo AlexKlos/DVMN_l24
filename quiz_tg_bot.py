@@ -3,7 +3,7 @@ import redis
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
+from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer, make_user_keys
 
 
 def start(update, context):
@@ -16,8 +16,8 @@ def start(update, context):
 def handle_text(update, context):
     user_id = update.effective_user.id
     r = context.bot_data['redis']
-    answer_key = f'user:{user_id}:current_answer'
-    if not r.get(answer_key):
+    keys = make_user_keys(user_id)
+    if not r.get(keys["a"]):
         return
 
     check_answer(update, context)
@@ -28,14 +28,12 @@ def ask_new_question(update, context):
     r = context.bot_data['redis']
     quiz_items = context.bot_data['quiz_items']
 
-    idx_key = f'user:{user_id}:idx'
-    question_key = f'user:{user_id}:current_question'
-    answer_key = f'user:{user_id}:current_answer'
+    keys = make_user_keys(user_id)
 
     if not quiz_items:
         update.message.reply_text('Нет вопросов')
 
-    idx = r.get(idx_key)
+    idx = r.get(keys["idx"])
     idx = int(idx) if idx is not None else 0
     if idx >= len(quiz_items):
         idx = 0
@@ -43,9 +41,9 @@ def ask_new_question(update, context):
     question, full_answer = quiz_items[idx]
     short_answer = cut_answer(full_answer)
 
-    r.set(question_key, question)
-    r.set(answer_key, short_answer)
-    r.set(idx_key, idx + 1)
+    r.set(keys["q"], question)
+    r.set(keys["a"], short_answer)
+    r.set(keys["idx"], idx + 1)
 
     update.message.reply_text(
         question.strip(),
@@ -57,21 +55,19 @@ def check_answer(update, context):
     user_id = update.effective_user.id
     r = context.bot_data['redis']
 
-    question_key = f'user:{user_id}:current_question'
-    answer_key = f'user:{user_id}:current_answer'
-    score_key = f'user:{user_id}:score'
+    keys = make_user_keys(user_id)
 
-    expected = r.get(answer_key) or ''
+    expected = r.get(keys["a"]) or ''
     user_text = update.message.text or ''
 
     if normalize_answer(user_text) == normalize_answer(expected):
-        r.incr(score_key, 1)
+        r.incr(keys["score"], 1)
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
             reply_markup=get_keyboard()
         )
-        r.delete(question_key)
-        r.delete(answer_key)
+        r.delete(keys["q"])
+        r.delete(keys["a"])
     else:
         update.message.reply_text(
             'Неправильно… Попробуешь ещё раз?',
@@ -82,8 +78,8 @@ def check_answer(update, context):
 def give_up(update, context):
     user_id = update.effective_user.id
     r = context.bot_data['redis']
-    answer_key = f'user:{user_id}:current_answer'
-    correct = r.get(answer_key)
+    keys = make_user_keys(user_id)
+    correct = r.get(keys["a"])
 
     if correct:
         update.message.reply_text(f'Правильный ответ: {correct}', reply_markup=get_keyboard())
@@ -96,8 +92,8 @@ def give_up(update, context):
 def show_score(update, context):
     user_id = update.effective_user.id
     r = context.bot_data['redis']
-    score_key = f'user:{user_id}:score'
-    score_val = r.get(score_key)
+    keys = make_user_keys(user_id)
+    score_val = r.get(keys["score"])
     score = int(score_val) if score_val is not None else 0
 
     update.message.reply_text(f'Твой счёт: {score}', reply_markup=get_keyboard())

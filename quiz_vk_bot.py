@@ -5,7 +5,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.utils import get_random_id
 
-from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
+from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer, make_user_keys
 
 
 def make_keyboard():
@@ -17,18 +17,8 @@ def make_keyboard():
     return keyboard
 
 
-def get_user_keys(user_id):
-    base = f'user:{user_id}'
-    return {
-        'idx': f'{base}:idx',
-        'q': f'{base}:current_question',
-        'a': f'{base}:current_answer',
-        'score': f'{base}:score',
-    }
-
-
 def ask_new_question(event, vk_api, r, quiz_items, keyboard):
-    keys = get_user_keys(event.user_id)
+    keys = make_user_keys(event.user_id)
     if not quiz_items:
         vk_api.messages.send(
             user_id=event.user_id,
@@ -56,7 +46,7 @@ def ask_new_question(event, vk_api, r, quiz_items, keyboard):
 
 
 def check_answer(event, vk_api, r, keyboard):
-    keys = get_user_keys(event.user_id)
+    keys = make_user_keys(event.user_id)
     expected = r.get(keys['a']) or ''
     user_text = event.text or ''
     if normalize_answer(user_text) == normalize_answer(expected):
@@ -79,7 +69,7 @@ def check_answer(event, vk_api, r, keyboard):
 
 
 def give_up(event, vk_api, r, quiz_items, keyboard):
-    keys = get_user_keys(event.user_id)
+    keys = make_user_keys(event.user_id)
     correct = r.get(keys['a'])
     if correct:
         vk_api.messages.send(
@@ -99,7 +89,7 @@ def give_up(event, vk_api, r, quiz_items, keyboard):
 
 
 def show_score(event, vk_api, r, keyboard):
-    keys = get_user_keys(event.user_id)
+    keys = make_user_keys(event.user_id)
     raw = r.get(keys['score'])
     score = int(raw) if raw is not None else 0
     vk_api.messages.send(
@@ -139,7 +129,7 @@ def main():
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             text = (event.text or '').strip()
-            keys = get_user_keys(event.user_id)
+            keys = make_user_keys(event.user_id)
     
             match text:
                 case 'Новый вопрос':

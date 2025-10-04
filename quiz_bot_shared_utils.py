@@ -33,3 +33,13 @@ def normalize_answer(text):
     processed_text = re.sub(r'\s+', ' ', processed_text)
 
     return processed_text
+
+
+def make_user_keys(user_id):
+    base = f'user:{user_id}'
+    return {
+        'idx': f'{base}:idx',
+        'q': f'{base}:current_question',
+        'a': f'{base}:current_answer',
+        'score': f'{base}:score',
+    }

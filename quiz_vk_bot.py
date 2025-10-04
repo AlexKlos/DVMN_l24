@@ -8,15 +8,6 @@ from vk_api.utils import get_random_id
 from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
 
 
-def send_message(vk_api, user_id, text, keyboard):
-    vk_api.messages.send(
-        user_id=user_id,
-        message=text,
-        keyboard=keyboard.get_keyboard(),
-        random_id=get_random_id(),
-    )
-
-
 def make_keyboard():
     keyboard = VkKeyboard(one_time=False)
     keyboard.add_button('Новый вопрос', color=VkKeyboardColor.SECONDARY)
@@ -24,7 +15,6 @@ def make_keyboard():
     keyboard.add_line()
     keyboard.add_button('Мой счёт', color=VkKeyboardColor.SECONDARY)
     return keyboard
-
 
 
 def get_user_keys(user_id):
@@ -40,7 +30,12 @@ def get_user_keys(user_id):
 def ask_new_question(event, vk_api, r, quiz_items, keyboard):
     keys = get_user_keys(event.user_id)
     if not quiz_items:
-        send_message(vk_api, event.user_id, 'Нет вопросов', keyboard)
+        vk_api.messages.send(
+            user_id=event.user_id,
+            message='Нет вопросов',
+            keyboard=keyboard.get_keyboard(),
+            random_id=get_random_id(),
+        )
         return
     
     raw_idx = r.get(keys['idx'])
@@ -52,7 +47,12 @@ def ask_new_question(event, vk_api, r, quiz_items, keyboard):
     r.set(keys['q'], question)
     r.set(keys['a'], short_answer)
     r.set(keys['idx'], idx + 1)
-    send_message(vk_api, event.user_id, question.strip(), keyboard)
+    vk_api.messages.send(
+        user_id=event.user_id,
+        message=question.strip(),
+        keyboard=keyboard.get_keyboard(),
+        random_id=get_random_id(),
+    )
 
 
 def check_answer(event, vk_api, r, keyboard):
@@ -61,25 +61,40 @@ def check_answer(event, vk_api, r, keyboard):
     user_text = event.text or ''
     if normalize_answer(user_text) == normalize_answer(expected):
         r.incr(keys['score'], 1)
-        send_message(
-            vk_api,
-            event.user_id,
-            'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
-            keyboard,
+        vk_api.messages.send(
+            user_id=event.user_id,
+            message='Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
+            keyboard=keyboard.get_keyboard(),
+            random_id=get_random_id(),
         )
         r.delete(keys['q'])
         r.delete(keys['a'])
     else:
-        send_message(vk_api, event.user_id, 'Неправильно… Попробуешь ещё раз?', keyboard)
+        vk_api.messages.send(
+            user_id=event.user_id,
+            message='Неправильно… Попробуешь ещё раз?',
+            keyboard=keyboard.get_keyboard(),
+            random_id=get_random_id(),
+        )
 
 
 def give_up(event, vk_api, r, quiz_items, keyboard):
     keys = get_user_keys(event.user_id)
     correct = r.get(keys['a'])
     if correct:
-        send_message(vk_api, event.user_id, f'Правильный ответ: {correct}', keyboard)
+        vk_api.messages.send(
+            user_id=event.user_id,
+            message=f'Правильный ответ: {correct}',
+            keyboard=keyboard.get_keyboard(),
+            random_id=get_random_id(),
+        )
     else:
-        send_message(vk_api, event.user_id, 'Вопрос не был задан', keyboard)
+        vk_api.messages.send(
+            user_id=event.user_id,
+            message='Вопрос не был задан',
+            keyboard=keyboard.get_keyboard(),
+            random_id=get_random_id(),
+        )
     ask_new_question(event, vk_api, r, quiz_items, keyboard)
 
 
@@ -87,7 +102,12 @@ def show_score(event, vk_api, r, keyboard):
     keys = get_user_keys(event.user_id)
     raw = r.get(keys['score'])
     score = int(raw) if raw is not None else 0
-    send_message(vk_api, event.user_id, f'Твой счёт: {score}', keyboard)
+    vk_api.messages.send(
+        user_id=event.user_id,
+        message=f'Твой счёт: {score}',
+        keyboard=keyboard.get_keyboard(),
+        random_id=get_random_id(),
+    )
 
 
 def main():

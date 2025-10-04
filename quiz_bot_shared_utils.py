@@ -1,34 +1,16 @@
 import re
 
+_QA_REGEX = re.compile(
+    r'(?m)^\s*Вопрос[^\n]*\r?\n(?P<q>.*?)^\s*Ответ:\s*\r?\n(?P<a>.*?)(?=\r?\n\s*\r?\n|$)', 
+    re.DOTALL
+)
+
+
 def get_qa_dict(filename, encoding):
-    with open(filename, 'r', encoding=encoding) as file:
-        lines = file.readlines()
+    with open(filename, 'r', encoding=encoding) as f:
+        text = f.read()
 
-    line_flag = 0
-    text_buffer = ''
-    question = ''
-    answer = ''
-    quiz = {}
-    for line in lines:
-        if line_flag != 0:
-            text_buffer += line
-
-        match line[:6].strip():
-            case 'Вопрос':
-                line_flag = 1
-                text_buffer = ''
-            case 'Ответ:':
-                line_flag = 2
-                text_buffer = ''
-            case '':
-                if line_flag == 1:
-                    question = text_buffer
-                elif line_flag == 2:
-                    answer = text_buffer
-                    quiz[question] = answer
-                line_flag = 0
-
-    return quiz
+    return {m['q'].strip(): m['a'].strip() for m in _QA_REGEX.finditer(text)}
 
 
 def cut_answer(answer):

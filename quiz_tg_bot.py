@@ -9,7 +9,7 @@ from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
 def start(update, context):
     update.message.reply_text(
         'Привет! Я бот для викторин!',
-        reply_markup=main_keyboard()
+        reply_markup=get_keyboard()
     )
 
 
@@ -49,7 +49,7 @@ def ask_new_question(update, context):
 
     update.message.reply_text(
         question.strip(),
-        reply_markup=main_keyboard()
+        reply_markup=get_keyboard()
     )
 
 
@@ -68,14 +68,14 @@ def check_answer(update, context):
         r.incr(score_key, 1)
         update.message.reply_text(
             'Правильно! Поздравляю! Для следующего вопроса нажми «Новый вопрос»',
-            reply_markup=main_keyboard()
+            reply_markup=get_keyboard()
         )
         r.delete(question_key)
         r.delete(answer_key)
     else:
         update.message.reply_text(
             'Неправильно… Попробуешь ещё раз?',
-            reply_markup=main_keyboard()
+            reply_markup=get_keyboard()
         )
 
 
@@ -86,9 +86,9 @@ def give_up(update, context):
     correct = r.get(answer_key)
 
     if correct:
-        update.message.reply_text(f'Правильный ответ: {correct}', reply_markup=main_keyboard())
+        update.message.reply_text(f'Правильный ответ: {correct}', reply_markup=get_keyboard())
     else:
-        update.message.reply_text('Вопрос не был задан', reply_markup=main_keyboard())
+        update.message.reply_text('Вопрос не был задан', reply_markup=get_keyboard())
 
     ask_new_question(update, context)
 
@@ -100,10 +100,10 @@ def show_score(update, context):
     score_val = r.get(score_key)
     score = int(score_val) if score_val is not None else 0
 
-    update.message.reply_text(f'Твой счёт: {score}', reply_markup=main_keyboard())
+    update.message.reply_text(f'Твой счёт: {score}', reply_markup=get_keyboard())
 
 
-def main_keyboard():
+def get_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[['Новый вопрос', 'Сдаться'], ['Мой счёт']],
         resize_keyboard=True,

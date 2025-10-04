@@ -111,26 +111,26 @@ def main_keyboard():
 
 def main():
     env.read_env()
-    TG_BOT_TOKEN = env.str('TG_BOT_TOKEN')
-    REDIS_HOST = env.str('REDIS_HOST')
-    REDIS_PORT = env.int('REDIS_PORT')
-    REDIS_DB = env.int('REDIS_DB', 0)
-    REDIS_PASSWORD = env.str('REDIS_PASSWORD')
-    QUIZ_FILE = env.str('QUIZ_FILE')
-    ENCODING = env.str('ENCODING')
+    tg_bot_token = env.str('TG_BOT_TOKEN')
+    redis_host = env.str('REDIS_HOST')
+    redis_port = env.int('REDIS_PORT')
+    redis_db = env.int('REDIS_DB', 0)
+    redis_pass = env.str('REDIS_PASSWORD')
+    quiz_file = env.str('QUIZ_FILE')
+    encoding = env.str('ENCODING')
 
-    quiz = get_qa_dict(QUIZ_FILE, ENCODING)
+    quiz = get_qa_dict(quiz_file, encoding)
     quiz_items = list(quiz.items())
 
     rds = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=REDIS_DB,
-        password=REDIS_PASSWORD,
+        host=redis_host,
+        port=redis_port,
+        db=redis_db,
+        password=redis_pass,
         decode_responses=True,
     )
 
-    updater = Updater(TG_BOT_TOKEN, use_context=True)
+    updater = Updater(tg_bot_token, use_context=True)
     dispatcher = updater.dispatcher
 
     dispatcher.bot_data['quiz_items'] = quiz_items

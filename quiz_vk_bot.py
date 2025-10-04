@@ -97,26 +97,26 @@ def show_score_vk(event, vk_api, rds, keyboard):
 
 def main():
     env.read_env()
-    VK_TOKEN = env.str('VK_TOKEN')
-    REDIS_HOST = env.str('REDIS_HOST')
-    REDIS_PORT = env.int('REDIS_PORT')
-    REDIS_DB = env.int('REDIS_DB', 0)
-    REDIS_PASSWORD = env.str('REDIS_PASSWORD')
-    QUIZ_FILE = env.str('QUIZ_FILE')
-    ENCODING = env.str('ENCODING')
+    vk_token = env.str('VK_TOKEN')
+    redis_host = env.str('REDIS_HOST')
+    redis_port = env.int('REDIS_PORT')
+    redis_db = env.int('REDIS_DB', 0)
+    redis_pass = env.str('REDIS_PASSWORD')
+    quiz_file = env.str('QUIZ_FILE')
+    encoding = env.str('ENCODING')
 
-    quiz = get_qa_dict(QUIZ_FILE, ENCODING)
+    quiz = get_qa_dict(quiz_file, encoding)
     quiz_items = list(quiz.items())
 
     rds = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=REDIS_DB,
-        password=REDIS_PASSWORD,
+        host=redis_host,
+        port=redis_port,
+        db=redis_db,
+        password=redis_pass,
         decode_responses=True,
     )
 
-    vk_session = vk.VkApi(token=VK_TOKEN)
+    vk_session = vk.VkApi(token=vk_token)
     vk_api = vk_session.get_api()
 
     keyboard = make_keyboard()

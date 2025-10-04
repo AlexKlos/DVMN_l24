@@ -1,11 +1,9 @@
 from environs import env
 import redis
 from telegram import ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
-
-ASKING = 1
 
 
 def start(update, context):
@@ -13,6 +11,16 @@ def start(update, context):
         'Привет! Я бот для викторин!',
         reply_markup=main_keyboard()
     )
+
+
+def handle_text(update, context):
+    user_id = update.effective_user.id
+    r = context.bot_data['redis']
+    answer_key = f'user:{user_id}:current_answer'
+    if not r.get(answer_key):
+        return
+
+    check_answer(update, context)
 
 
 def ask_new_question(update, context):
@@ -26,7 +34,6 @@ def ask_new_question(update, context):
 
     if not quiz_items:
         update.message.reply_text('Нет вопросов')
-        return ConversationHandler.END
 
     idx = r.get(idx_key)
     idx = int(idx) if idx is not None else 0
@@ -44,8 +51,6 @@ def ask_new_question(update, context):
         question.strip(),
         reply_markup=main_keyboard()
     )
-
-    return ASKING
 
 
 def check_answer(update, context):
@@ -67,19 +72,16 @@ def check_answer(update, context):
         )
         r.delete(question_key)
         r.delete(answer_key)
-        return ConversationHandler.END
     else:
         update.message.reply_text(
             'Неправильно… Попробуешь ещё раз?',
             reply_markup=main_keyboard()
         )
-        return ASKING
 
 
 def give_up(update, context):
     user_id = update.effective_user.id
     r = context.bot_data['redis']
-
     answer_key = f'user:{user_id}:current_answer'
     correct = r.get(answer_key)
 
@@ -88,7 +90,7 @@ def give_up(update, context):
     else:
         update.message.reply_text('Вопрос не был задан', reply_markup=main_keyboard())
 
-    return ask_new_question(update, context)
+    ask_new_question(update, context)
 
 
 def show_score(update, context):
@@ -136,27 +138,12 @@ def main():
     dispatcher.bot_data['quiz_items'] = quiz_items
     dispatcher.bot_data['redis'] = r
 
-    conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('^Новый вопрос$'), ask_new_question)],
-        states={
-            ASKING: [
-                MessageHandler(Filters.regex('^Сдаться$'), give_up),
-                MessageHandler(Filters.regex('^Мой счёт$'), show_score),
-                MessageHandler(Filters.text & ~Filters.command, check_answer),
-            ]
-        },
-        fallbacks=[
-            CommandHandler('start', start),
-            MessageHandler(Filters.regex('^Мой счёт$'), show_score),
-            MessageHandler(Filters.regex('^Сдаться$'), give_up),
-        ],
-        per_user=True,
-        per_chat=True,
-    )
 
     dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(conv)
+    dispatcher.add_handler(MessageHandler(Filters.regex('^Новый вопрос$'), ask_new_question))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^Сдаться$'), give_up))
     dispatcher.add_handler(MessageHandler(Filters.regex('^Мой счёт$'), show_score))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
 
     updater.start_polling()
     updater.idle()

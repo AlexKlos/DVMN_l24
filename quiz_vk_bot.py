@@ -34,15 +34,13 @@ def user_keys(user_id):
         'q': f'{base}:current_question',
         'a': f'{base}:current_answer',
         'score': f'{base}:score',
-        'state': f'{base}:state',
     }
 
 
-def ask_new_question_vk(event, vk_api, r, quiz_items, keyboard):
+def ask_new_question(event, vk_api, r, quiz_items, keyboard):
     keys = user_keys(event.user_id)
     if not quiz_items:
         send(vk_api, event.user_id, 'Нет вопросов', keyboard)
-        r.set(keys['state'], 'IDLE')
         return
     
     raw_idx = r.get(keys['idx'])
@@ -54,11 +52,10 @@ def ask_new_question_vk(event, vk_api, r, quiz_items, keyboard):
     r.set(keys['q'], question)
     r.set(keys['a'], short_answer)
     r.set(keys['idx'], idx + 1)
-    r.set(keys['state'], 'ASKING')
     send(vk_api, event.user_id, question.strip(), keyboard)
 
 
-def check_answer_vk(event, vk_api, r, keyboard):
+def check_answer(event, vk_api, r, keyboard):
     keys = user_keys(event.user_id)
     expected = r.get(keys['a']) or ''
     user_text = event.text or ''
@@ -72,23 +69,21 @@ def check_answer_vk(event, vk_api, r, keyboard):
         )
         r.delete(keys['q'])
         r.delete(keys['a'])
-        r.set(keys['state'], 'IDLE')
     else:
         send(vk_api, event.user_id, 'Неправильно… Попробуешь ещё раз?', keyboard)
-        r.set(keys['state'], 'ASKING')
 
 
-def give_up_vk(event, vk_api, r, quiz_items, keyboard):
+def give_up(event, vk_api, r, quiz_items, keyboard):
     keys = user_keys(event.user_id)
     correct = r.get(keys['a'])
     if correct:
         send(vk_api, event.user_id, f'Правильный ответ: {correct}', keyboard)
     else:
         send(vk_api, event.user_id, 'Вопрос не был задан', keyboard)
-    ask_new_question_vk(event, vk_api, r, quiz_items, keyboard)
+    ask_new_question(event, vk_api, r, quiz_items, keyboard)
 
 
-def show_score_vk(event, vk_api, r, keyboard):
+def show_score(event, vk_api, r, keyboard):
     keys = user_keys(event.user_id)
     raw = r.get(keys['score'])
     score = int(raw) if raw is not None else 0
@@ -125,18 +120,19 @@ def main():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             text = (event.text or '').strip()
             keys = user_keys(event.user_id)
-            state = r.get(keys['state']) or 'IDLE'
     
             match text:
                 case 'Новый вопрос':
-                    ask_new_question_vk(event, vk_api, r, quiz_items, keyboard)
+                    ask_new_question(event, vk_api, r, quiz_items, keyboard)
                 case 'Сдаться':
-                    give_up_vk(event, vk_api, r, quiz_items, keyboard)
+                    give_up(event, vk_api, r, quiz_items, keyboard)
                 case 'Мой счёт':
-                    show_score_vk(event, vk_api, r, keyboard)
+                    show_score(event, vk_api, r, keyboard)
                 case _:
-                    if state == 'ASKING':
-                        check_answer_vk(event, vk_api, r, keyboard)
+                    if r.get(keys['a']):
+                        check_answer(event, vk_api, r, keyboard)
+                    else:
+                        pass
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import re
 
-def get_qa_dic(filename, encoding):
+def get_qa_dict(filename, encoding):
     with open(filename, 'r', encoding=encoding) as file:
         lines = file.readlines()
 

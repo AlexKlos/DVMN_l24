@@ -3,7 +3,7 @@ import redis
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
 
-from quiz_bot_shared_utils import get_qa_dic, cut_answer, normalize_answer
+from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer
 
 ASKING = 1
 
@@ -126,7 +126,7 @@ def main():
     QUIZ_FILE = env.str('QUIZ_FILE')
     ENCODING = env.str('ENCODING')
 
-    quiz = get_qa_dic(QUIZ_FILE, ENCODING)
+    quiz = get_qa_dict(QUIZ_FILE, ENCODING)
     quiz_items = list(quiz.items())
 
     rds = redis.Redis(

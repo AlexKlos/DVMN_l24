@@ -15,13 +15,6 @@ def start(update, context):
     )
 
 
-def echo(update, context):
-    update.message.reply_text(
-        update.message.text,
-        reply_markup=main_keyboard()
-    )
-
-
 def ask_new_question(update, context):
     user_id = update.effective_user.id
     rds = context.bot_data['redis']
@@ -164,7 +157,6 @@ def main():
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(conv)
     dispatcher.add_handler(MessageHandler(Filters.regex('^Мой счёт$'), show_score))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
 
     updater.start_polling()
     updater.idle()

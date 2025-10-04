@@ -27,10 +27,6 @@ def make_keyboard():
 
 
 
-def echo(event, vk_api, keyboard):
-    send(vk_api, event.user_id, event.text, keyboard)
-
-
 def user_keys(user_id):
     base = f'user:{user_id}'
     return {
@@ -141,8 +137,6 @@ def main():
                 case _:
                     if state == 'ASKING':
                         check_answer_vk(event, vk_api, rds, keyboard)
-                    else:
-                        echo(event, vk_api, keyboard)
 
 
 if __name__ == '__main__':

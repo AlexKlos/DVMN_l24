@@ -32,8 +32,6 @@ def get_qa_dict(filename, encoding):
 
 
 def cut_answer(answer):
-    if not answer:
-        return ''
     a = answer.strip()
     p_dot = a.find('.')
     p_par = a.find('(')

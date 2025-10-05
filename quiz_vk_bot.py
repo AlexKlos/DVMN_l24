@@ -5,7 +5,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.utils import get_random_id
 
-from quiz_bot_shared_utils import get_qa_dict, cut_answer, normalize_answer, make_user_keys
+from quiz_bot_shared_utils import get_qa, cut_answer, normalize_answer, make_user_keys
 
 
 def make_keyboard():
@@ -110,7 +110,7 @@ def main():
     quiz_file = env.str('QUIZ_FILE')
     encoding = env.str('ENCODING')
 
-    quiz = get_qa_dict(quiz_file, encoding)
+    quiz = get_qa(quiz_file, encoding)
     quiz_items = list(quiz.items())
 
     r = redis.Redis(

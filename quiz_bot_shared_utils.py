@@ -6,7 +6,7 @@ _QA_REGEX = re.compile(
 )
 
 
-def get_qa_dict(filename, encoding):
+def get_qa(filename, encoding):
     with open(filename, 'r', encoding=encoding) as f:
         text = f.read()
 

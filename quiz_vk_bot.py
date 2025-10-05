@@ -141,8 +141,6 @@ def main():
                 case _:
                     if r.get(keys['a']):
                         check_answer(event, vk_api, r, keyboard)
-                    else:
-                        pass
 
 
 if __name__ == '__main__':
